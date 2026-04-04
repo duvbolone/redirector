@@ -28,6 +28,9 @@ bool is_authenticated(const httplib::Request &req, std::string token) {
         if (req.has_param("token")) {
             return (req.get_param_value("token") == token);
         }
+        if (req.has_param("t")) {
+            return (req.get_param_value("t") == token);
+        }
         return false;
     }
 
@@ -149,6 +152,23 @@ int main(int argc, char **argv) {
 
     if (ssl)
         httplib::SSLServer svr(cert.c_str(), key.c_str());
+
+
+    svr.Get("/cleanup", [&](const httplib::Request &req, httplib::Response &res) {
+        if (!is_authenticated(req, token)) {
+            res.status = 401;
+            res.set_content("Unauthorized - 401", "text/plain");
+            return;
+        }
+
+        const char *del_sql = "DELETE FROM redirects WHERE CAST(expires AS INTEGER) < strftime('%s', 'now') AND expires <> '0';";
+        if (sqlite3_exec(db, del_sql, NULL, 0, nullptr)) {
+            res.status = 500;
+            res.set_content("Failed :(", "text/plain");
+        } else {
+            res.set_content("Success!", "text/plain");
+        }
+    });
 
     svr.Get("/:rid", [&](const httplib::Request& req, httplib::Response& res) {
         std::string rid = req.path_params.at("rid");
@@ -328,7 +348,7 @@ int main(int argc, char **argv) {
             ss << "While stepping for a new RID: " << sqlite3_errmsg(db);
             error(ss.str());
             res.status = 500;
-            res.set_content("SQLite error :(", "text/plain");
+            res.set_content(sqlite3_errmsg(db), "text/plain");
             return;
         }
         

@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
             const unsigned char *expires = sqlite3_column_text(stmt, 0);
             const auto epoch = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(); 
             const int expires_i = std::atoi(reinterpret_cast<const char*>(expires));
-            if (epoch > expires_i) {
+            if (epoch > expires_i && expires_i != 0) {
                 res.set_redirect(NOT_FOUND_URL);
 
                 sqlite3_stmt* d_stmt;
@@ -259,10 +259,14 @@ int main(int argc, char **argv) {
             expires = body["expires"];
         } else if (body.contains("expires_in")) {
             int expires_in = body["expires_in"];
-            expires = epoch + expires_in;
+            if (expires_in != 0) {
+                expires = epoch + expires_in;
+            } else {
+                expires = 0;
+            }
         }
 
-        if (expires < epoch) {
+        if (expires < epoch && expires != 0) {
             res.status = 400;
             res.set_content("Expires is older than current time.", "text/plain");
             return;

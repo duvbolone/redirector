@@ -15,7 +15,7 @@ endif()
 find_package(OpenSSL REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-set(SOURCES server.cpp)
+set(SOURCES src/server.cpp src/utils.cpp src/rid.cpp)
 add_executable(redirector ${SOURCES})
 
 target_include_directories(redirector PRIVATE "include")
